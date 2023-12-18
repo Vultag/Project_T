@@ -1,0 +1,10 @@
+
+	- plains:
+
+	- forest:
+
+	- swamp:
+
+	- mountains:
+
+	- desert:
