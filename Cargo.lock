@@ -7,6 +7,7 @@ name = "Project_T"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy-fps-counter",
  "env_logger",
  "log",
  "noise",
@@ -378,6 +379,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "329e344f835f5a9a4c46a6d1d57371f726aa2c482d1bd669b2b9c4eb1ee91fd7"
 dependencies = [
  "bevy_internal",
+]
+
+[[package]]
+name = "bevy-fps-counter"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "999a4718c50c5d7172b4a0a8e2a2597925d91fe10e086514d5d6f664eb802075"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]

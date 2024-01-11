@@ -1,3 +1,7 @@
+#![allow(warnings)]
+
+
+use std::any::Any;
 use std::collections::btree_map::Range;
 use std::f32::consts::{PI, E};
 
@@ -11,6 +15,8 @@ use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
 use noisy_bevy::{simplex_noise_2d_seeded,fbm_simplex_2d_seeded, NoisyShaderPlugin};
+
+use bevy_fps_counter::{FpsCounter, FpsCounterPlugin};
 
 
 use bevy::input::mouse::MouseWheel;
@@ -31,6 +37,13 @@ use bevy::{
         RenderPlugin,
     },
 };
+
+
+mod terrain_mesh;
+mod terrain_noise;
+
+use terrain_mesh::TerrainMesh;
+use terrain_noise::SubHeightMapU16;
 
 #[derive(Component)]
 struct CameraData {
@@ -103,176 +116,62 @@ fn main() {
         // The global wireframe config enables drawing of wireframes on every mesh,
         // except those with `NoWireframe`. Meshes with `Wireframe` will always have a wireframe,
         // regardless of the global configuration.
-        global: true,
+        global: false,
         // Controls the default color of all wireframes. Used as the default color for global wireframes.
         // Can be changed per mesh using the `WireframeColor` component.
         default_color: Color::RED,
     })
-    .init_resource::<TerrainMeshResource>()
+    //.init_resource::<TerrainMeshResource>()
     .add_plugins(MaterialPlugin::<TerainMaterial>::default())
     .add_plugins(MaterialPlugin::<TestMaterial>::default())
     .add_plugins(NoisyShaderPlugin)
-    .add_systems(Startup, create_terrain)
+    .add_plugins(FpsCounterPlugin)
     .add_systems(Startup, test_create_terrain)
     .add_systems(Startup, spawn_camera)
     .add_systems(Update, camera_control)
+    .add_systems(Update, terrain_authoring)
 
     .run()
 }
 
+#[derive(Default,Component)]
 pub struct TerrainMeshData {
-    pub vertices: Vec::<Vec3>,
-    pub indices: Vec::<u32>
+    pub subdivision:u32,
+    pub NOISE_SCALE:f32,
+    pub NOISE_HEIGHT_SCALE:f32,
+    pub NOISE_CLAMPING:f32,
+    pub HILL_HEIGHT:f32,
+    pub PIT_DEPTH:f32,
  }
 
 
- #[derive(Default,Resource)]
- pub struct TerrainMeshResource {
-     pub shaded: Handle<Mesh>,
-     pub wireframe: Handle<Mesh>,
- }
+//  #[derive(Default,Resource)]
+//  pub struct TerrainMeshResource {
+//      pub shaded: Handle<Mesh>,
+//      pub wireframe: Handle<Mesh>,
+//  }
 
 
 fn test_create_terrain(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     asset_server: ResMut<AssetServer>,
-    mut terrain_mesh_res: ResMut<TerrainMeshResource>,
+    mut terainmaterial: ResMut<Assets<TerainMaterial>>,
+    //mut terrain_mesh_res: ResMut<TerrainMeshResource>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     //mut mattest_asset: ResMut<Assets<testMat>>
 ) {
 
     
-    let mut ground_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-    //let mut vertices : Vec::<[f32; 3]> = Vec::new();
-    let mut positions : Vec::<[f32; 3]> = Vec::new();
-    let mut normals : Vec::<[f32; 3]> = Vec::new();
-    let mut indices : Vec::<u32> = Vec::new();
-    let mut uvs = Vec::new();
-
-    //number of vertices
-    let vertex_number = ( 2 * 2) as usize; 
-
-    // vertices.resize(vertex_number, [0.0f32, 0.0f32, 0.0f32]);
-    // normals.resize(vertex_number, [0.0f32, 1.0f32, 0.0f32]);
-    // let uvs = vec![[0.0, 0.0]; vertices.len()];
-
-
-    let mut vertex_index = 0;
-    // for cy in 0..(heightmap.height() as i32 +1) {
-    //     for cx in 0..(heightmap.width() as i32 +1) {
-            
-    //         let height = sample_vertex_height(cy, cx, heightmap);
-
-    //         vertices[vertex_index] = [cx as f32 * options.pixel_side_length,
-    //           height * options.max_image_height, 
-
-    //           cy as f32 * options.pixel_side_length];
-
-    //         vertex_index += 1;
-    //     }
-    // }
-        let v_num = vertex_number as i32;
-
-        let plane_size = 2.0;
-
-        // for v in 0..(v_num){
-
-        //     vertices[vertex_index] = [vertex_index as f32 * 0.1,vertex_index as f32 * 0.1,vertex_index as f32 * 0.1];
-        //     println!("{:?}",vertices[vertex_index]);
-
-        //     vertex_index +=1;
-        // }
-
-        let mut vertices = [
-            ([plane_size, 0.0, -plane_size], [0.0, 1.0, 0.0], [1.0, 1.0]),
-            ([plane_size, 0.0, plane_size], [0.0, 1.0, 0.0], [1.0, 0.0]),
-            ([-plane_size, 0.0, plane_size], [0.0, 1.0, 0.0], [0.0, 0.0]),
-            ([-plane_size, 0.0, -plane_size], [0.0, 1.0, 0.0], [0.0, 1.0]),
-        ];
-        for (position, normal, uv) in vertices.iter() {
-            positions.push(*position);
-            normals.push(*normal);
-            uvs.push(*uv);
-        }
-
-
-        // vertices[0] = [2.0,0.0,-2.0];
-        // vertices[1] = [2.0,0.0,2.0];
-        // vertices[2] = [-2.0,0.0,2.0];
-        // vertices[3] = [-2.0,0.0,-2.0];
-        // normals[0] = [0.0,1.0,0.0];
-        // normals[1] = [0.0,1.0,0.0];
-        // normals[2] = [0.0,1.0,0.0];
-        // normals[3] = [0.0,1.0,0.0];
-
-        indices = vec![0, 2, 1, 0, 3, 2];
-    
-            // for i in 0..(v_num){
-            //     indices.extend([
-            //         i * v_num + i, 
-            //         (i + 1) * v_num + i + 1, 
-            //         i * v_num + i + 1, 
-            //     ].iter());
-            //     indices.extend([
-            //         i * v_num + i, 
-            //         (i + 1) * v_num + i, 
-            //         (i + 1) * v_num + i + 1, 
-            //     ].iter());  
-            // }
-
-
-        ground_mesh.insert_attribute(
-            Mesh::ATTRIBUTE_POSITION,
-            VertexAttributeValues::Float32x3(positions));
-        ground_mesh.insert_attribute(
-            Mesh::ATTRIBUTE_NORMAL, 
-            VertexAttributeValues::Float32x3(normals));
-        // ground_mesh.insert_attribute(
-        //     Mesh::ATTRIBUTE_UV_0,
-        //      VertexAttributeValues::Float32x2(uvs));
-        ground_mesh.set_indices(Some(Indices::U32(indices)));
-
-
-    //let (terrain_shaded_mesh) = rtin_load_terrain(image_filename,&rtin_params);
-
-    let terrain_shaded_mesh_handle = meshes.add(ground_mesh);
+    //TEST TERRAIN MESH
+    const subdivision:u32 = 80;
+    //add noise parameters ?
+    let mesh = TerrainMesh::build_terrain( 80.0, subdivision);
+    let terrain_shaded_mesh_handle = meshes.add(mesh);
 
     //terrain_mesh_res.shaded = terrain_shaded_mesh_handle;
 
-    let custom_texture_handle: Handle<Image> = asset_server.load("texture_dirt.png");
-
-    commands.spawn((MaterialMeshBundle  {
-        mesh: terrain_shaded_mesh_handle,
-        material: materials.add(StandardMaterial{base_color_texture:Some(custom_texture_handle),
-
-            ..Default::default()
-            }),
-        ..default()
-    },
-    ));
-
-
-
-}
-
-
-fn create_terrain(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    //mut materials: ResMut<Assets<StandardMaterial>>,
-    mut terainmaterial: ResMut<Assets<TerainMaterial>>,
-    mut testmaterial: ResMut<Assets<TestMaterial>>,
-    asset_server: ResMut<AssetServer>,
-    //mut mattest_asset: ResMut<Assets<testMat>>
-) {
-
-    // commands.spawn(MaterialMeshBundle)
-    // {
-
-    // }
-
+    let custom_texture_handle: Handle<Image> = asset_server.load("uv_grid.png");
     let custom_texture_handle_g: Handle<Image> = asset_server.load("grass-texture-background.png");
     let custom_texture_handle_d: Handle<Image> = asset_server.load("texture_dirt.png");
 
@@ -281,27 +180,85 @@ fn create_terrain(
         value: 0.0,
         color_texture_d:Some(custom_texture_handle_d),
     });
-    let test_mat = testmaterial.add(TestMaterial{});
 
+    commands.spawn((MaterialMeshBundle  {
+        mesh: terrain_shaded_mesh_handle,
+        //material: terain_mat,
+        material: materials.add(StandardMaterial{
+            
+            base_color_texture:Some(custom_texture_handle),
+            alpha_mode:AlphaMode::Opaque,
+            double_sided:true,
+
+            ..Default::default()
+            }),
+        ..default()
+    },
+    )).insert(TerrainMeshData{
+        subdivision,NOISE_SCALE:0.05,
+        NOISE_HEIGHT_SCALE:10.0,
+        NOISE_CLAMPING:2.0,
+        HILL_HEIGHT:0.5,
+        PIT_DEPTH:0.0
+    });
+
+
+
+}
+
+fn terrain_authoring(
+    mut commands: Commands,
+    mut mesh_assets: ResMut<Assets<Mesh>>,
+    mut terrain_query: Query<(&Handle<Mesh>,&mut TerrainMeshData)>, 
+    mouse_button: Res<Input<MouseButton>>,    
+
+) {
+
+    if (mouse_button.just_pressed(MouseButton::Left))
+    {
+
+
+        for (mut mesh_handle, mut terrain_data) in terrain_query.iter_mut() {
     
+            
+            let mut mesh = mesh_assets.get_mut(mesh_handle.id()).unwrap();
 
+            terrain_data.NOISE_SCALE -=0.5;
 
-    let ground_mesh = meshes.add(Mesh::from(shape::Plane { size: 15.0, subdivisions: 15 }));
-
-    // commands.spawn((MaterialMeshBundle  {
-    //     mesh: ground_mesh,
-    //     //material: materials.add(Color::rgb(0.0, 1.0, 0.0).into()),
-    //     // material: materials.add(StandardMaterial{base_color_texture:Some(custom_texture_handle),
-
-    //     //     ..Default::default()
-    //     // }),
-    //     material: test_mat,
-    //     ..default()
-    // },
-    // GroundTag{},
-    // ));
-
+            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision, terrain_data.NOISE_SCALE, terrain_data.NOISE_HEIGHT_SCALE, terrain_data.NOISE_CLAMPING, terrain_data.HILL_HEIGHT, terrain_data.PIT_DEPTH);
     
+        }
+
+        //let mesh_handle = terrain_query.get_single_mut().unwrap();
+        //let mut mesh = mesh_assets.get_mut(mesh_handle.id()).unwrap();
+
+     }
+
+}
+
+
+
+fn spawn_camera(mut commands: Commands) {
+
+    let direction = Vec3{x:0.5,y:0.4,z:0.5};
+    let length = 6.0;
+    let pos = direction.normalize()*length;
+
+
+    commands.spawn((
+        Camera3dBundle {
+        projection: PerspectiveProjection {
+            near: 1.0,
+            ..default()
+        }
+        .into(),
+        transform: Transform::from_xyz(pos.x,pos.y,pos.z)
+        .looking_at(Vec3::ZERO, Vec3::Y),
+        ..default()
+    },
+    CameraData{lenght :length,target : Vec3::ZERO, direction: pos.normalize()},            
+    ));
+
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             shadows_enabled: true,
@@ -315,32 +272,6 @@ fn create_terrain(
 
         ..default()
     });
-
-    //toggle_texture(meshes.get_mut(ground_mesh).unwrap());
-
-}
-
-fn spawn_camera(mut commands: Commands) {
-
-    let direction = Vec3{x:0.5,y:0.4,z:0.5};
-    let length = 6.0;
-    let pos = direction.normalize()*length;
-
-
-    commands.spawn((
-        Camera3dBundle {
-        projection: PerspectiveProjection {
-            near: 0.0,
-            ..default()
-        }
-        .into(),
-        transform: Transform::from_xyz(pos.x,pos.y,pos.z)
-        .looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    },
-    CameraData{lenght :length,target : Vec3::ZERO, direction: pos.normalize()},            
-    ));
-
 
 }
 
@@ -387,7 +318,7 @@ fn camera_control(
 
         //ZOOM disabled
         cam.1.lenght-=scroll.y*0.4*cam.1.lenght;
-        cam.1.lenght = cam.1.lenght.clamp(0.1, 10.0);
+        cam.1.lenght = cam.1.lenght.clamp(0.1, 50.0);
         
         // = lerp cam.1.direction*cam.1.lenght;
 

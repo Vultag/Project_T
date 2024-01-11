@@ -120,14 +120,22 @@ fn fragment(
     //blend two colors
     {
 
+
         final_color = mix(color_d,color_g,clamp(abs(fbm_simplex_2d_seeded(mesh.world_position.xz*0.5, 1, 1.0, 1.0, 4.0)*1.28255)*2.5,0.0,1.0));
 
     }
 
-
+    //var test_noise = clamp(abs(fbm_simplex_2d_seeded(mesh.world_position.xz*0.5, 1, 1.0, 1.0, 4.0)*1.28255)*2.5,0.0,1.0);
+    //var test_noise = (fbm_simplex_2d_seeded(mesh.world_position.xz*0.1, 1, 1.0, 1.0, 4.0)*1.28255)*0.5+0.5;
+    var test_noise_for_hills = (clamp(fbm_simplex_2d_seeded(mesh.world_position.xz*0.05, 1, 1.0, 1.0, 4.0)*1.28255+(-0.5),0.0,1.0)*10.0);
+    //invert
+    //test_noise = abs(test_noise+(-1.0));
 
     //return vec4(uv*rotation,1.0,1.0);
     //return vec4(noise,1.0,1.0);
-    return vec4(final_color.rgb,1.0);
+
+    //return vec4(final_color.rgb,1.0);
+    //test noise
+    return vec4(test_noise_for_hills,test_noise_for_hills,test_noise_for_hills,1.0);
 
 }
