@@ -43,7 +43,6 @@ mod terrain_mesh;
 mod terrain_noise;
 
 use terrain_mesh::TerrainMesh;
-use terrain_noise::SubHeightMapU16;
 
 #[derive(Component)]
 struct CameraData {
