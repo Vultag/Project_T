@@ -1,6 +1,10 @@
 
+use bevy::app::AppExit;
 use bevy::{prelude::Mesh, ecs::component};
 use bevy::render::mesh::Indices;
+use bevy::math;
+
+use std::any::Any;
 
 //use crate::terrain_heightmap::{HeightMapU16, SubHeightMapU16};
 
@@ -28,25 +32,6 @@ impl TerrainMesh {
             indices: Vec::new(),
         }
     }
-
-    fn add_triangle(&mut self, positions: [[f32; 3]; 3], uvs: [[f32; 2]; 3]) {
-        // Add vertices and indices
-        for psn in &positions {
-         //   println!("psn {:?}", psn);
-            self.positions.push(*psn);
-        }
-        let start_idx = self.positions.len() as u32 - 3;
-        self.indices.extend (&[start_idx, start_idx + 1, start_idx + 2]);   
-        
-        //stubbed in for now ... 
-        let normal = compute_normal(positions[0], positions[1], positions[2]);
-        self.normals.extend([normal, normal, normal]);
-        
-        
-        self.uvs.extend( uvs ) ; 
-    }
-    
-     
     
     pub fn build_terrain(
 
@@ -57,102 +42,82 @@ impl TerrainMesh {
     
     ) -> Mesh{ 
             
-
         let mut premesh = Self::new();
 
         let step = size /subdivision as f32;
 
-        //println!("{}",step);
+        for x in (0..subdivision+1).map(|x| x as f32 * step){
+            for z in (0..subdivision+1).map(|x| x as f32 * step)
+            {
 
-        //marche sauf que les decimal rend le mesh plus petit qu il ne devrait etre
-        for x in (0..subdivision).map(|x| x as f32 * step){
-            for z in (0..subdivision).map(|x| x as f32 * step){
-                 
-
-                //println!("{}",x);
-
-                //let fx = (x*(size[0]/subdivision)) as f32;
-                //let fz = (z*(size[1]/subdivision)) as f32;
-
-                //center le mesh around its origin
                 let fx = (x-size *0.5) ;
                 let fz = (z-size *0.5) ;
-
-
+                
+                //println!("{}", x);
+                
+                // 2 type of noise scale : 1 for hills, 1 for pits
                 const NOISE_SCALE:f32 = 0.05;
                 const NOISE_HEIGHT_SCALE:f32 = 10.0; 
                 const NOISE_CLAMPING:f32 = 2.0;
                 const HILL_HEIGHT:f32 = 0.5;
                 const PIT_DEPTH:f32 = 0.0;
-
-                let lb_hill = ((fbm_simplex_2d_seeded(Vec2{x:(fx)*NOISE_SCALE,y:fz*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING); 
-                let lf_hill = ((fbm_simplex_2d_seeded(Vec2{x:(fx)*NOISE_SCALE,y:(fz+step)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING); 
-                let rb_hill = ((fbm_simplex_2d_seeded(Vec2{x:(fx+step)*NOISE_SCALE,y:(fz)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
-                let rf_hill = ((fbm_simplex_2d_seeded(Vec2{x:(fx+step)*NOISE_SCALE,y:(fz+step)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
-
-                let lb_pit = ((fbm_simplex_2d_seeded(Vec2{x:(fx)*NOISE_SCALE,y:fz*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255-PIT_DEPTH+1.0).clamp(-1.0, 0.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING); 
-                let lf_pit = ((fbm_simplex_2d_seeded(Vec2{x:(fx)*NOISE_SCALE,y:(fz+step)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255-PIT_DEPTH+1.0).clamp(-1.0, 0.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING); 
-                let rb_pit = ((fbm_simplex_2d_seeded(Vec2{x:(fx+step)*NOISE_SCALE,y:(fz)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255-PIT_DEPTH+1.0).clamp(-1.0, 0.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
-                let rf_pit = ((fbm_simplex_2d_seeded(Vec2{x:(fx+step)*NOISE_SCALE,y:(fz+step)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255-PIT_DEPTH+1.0).clamp(-1.0, 0.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
-
-
-
+                
+                let fy_hill = ((fbm_simplex_2d_seeded(Vec2{x:fx*NOISE_SCALE,y:fz*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
+                let fy_pitt = ((fbm_simplex_2d_seeded(Vec2{x:fx*NOISE_SCALE,y:fz*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255-PIT_DEPTH+1.0).clamp(-1.0, 0.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
                 
                 //les hauteurs des vertices
-                let lb = lb_hill+lb_pit;
-                let lf = lf_hill+lf_pit;
-                let rb = rb_hill+rb_pit;
-                let rf = rf_hill+rf_pit;
- 
-                // let lb = ((fbm_simplex_2d_seeded(Vec2{x:(x)*NOISE_SCALE,y:z*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING); 
-                // let lf = ((fbm_simplex_2d_seeded(Vec2{x:(x)*NOISE_SCALE,y:(z+step)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING); 
-                // let rb = ((fbm_simplex_2d_seeded(Vec2{x:(x+step)*NOISE_SCALE,y:(z)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
-                // let rf = ((fbm_simplex_2d_seeded(Vec2{x:(x+step)*NOISE_SCALE,y:(z+step)*NOISE_SCALE}, 3, 1.0, 1.0, 4.0)*1.28255+HILL_HEIGHT-1.0).clamp(0.0, 1.0)*NOISE_HEIGHT_SCALE).clamp(-NOISE_CLAMPING,NOISE_CLAMPING);
-
-                //UV setting not at the best currently
-                let test_bounds:[[f32 ; 2]  ;2 ] = [[0.0,0.0],[1.0,1.0]];
+                let fy = fy_hill + fy_pitt;
                 
-                let uv_lb = compute_uv(x as f32, z as f32, test_bounds, size);
-                let uv_rb = compute_uv(x as f32+step, z as f32, test_bounds, size);
-                let uv_rf = compute_uv(x as f32+step, z as f32+step, test_bounds, size);
-                let uv_lf = compute_uv(x as f32, z as f32+step, test_bounds, size);
-                //REMPLACE WHEN ABLE TO REPEATE THE TEXTURE INSTEAD OF EXTEND
-                // let uv_lb = compute_uv(x as f32, z as f32, test_bounds, size*8.0/subdivision as f32);
-                // let uv_rb = compute_uv(x as f32+step, z as f32, test_bounds, size*8.0/subdivision as f32);
-                // let uv_rf = compute_uv(x as f32+step, z as f32+step, test_bounds, size*8.0/subdivision as f32);
-                // let uv_lf = compute_uv(x as f32, z as f32+step, test_bounds, size*8.0/subdivision as f32);
+                let vertex_pos = [fx, fy, fz];
+                //println!("{:?}",vertex_pos);
+                premesh.positions.push(vertex_pos);
 
-
-                //println!("{}",fx);
-
-
-
-                let left_back = [fx, lb, fz];
-                let right_back = [(fx+step) , rb, fz];
-                let right_front = [(fx+step) , rf, (fz+step)];
-                let left_front = [fx , lf, (fz+step)];
-    
-
-                premesh.add_triangle([left_front, right_back, left_back], [uv_lf, uv_rb, uv_lb]);
-                premesh.add_triangle([right_front, right_back, left_front], [uv_rf, uv_rb, uv_lf]);
             }
+
+            if(x!=0.0)
+            {        
+                for i in (0..subdivision)
+                {
+                    premesh.setup_quad((x/step) as u32,i,subdivision);
+                }
+            }
+    
+        }
+
+        for i in (0..premesh.positions.len())
+        {
+        
+            premesh.uvs.extend(vec![[premesh.positions[i][0] / size+0.5, premesh.positions[i][2] / size+0.5]]);
+            
         }
 
 
+        let mut mesh = Mesh::new( TriangleList );
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, premesh.positions);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, premesh.uvs);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, premesh.normals);
+        mesh.set_indices(Some(Indices::U32(premesh.indices)));
+        mesh
 
-
-        println!("{:?}",premesh.positions[0]);
-
-
-            let mut mesh = Mesh::new( TriangleList );
-            mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, premesh.positions);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, premesh.uvs);
-            mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, premesh.normals);
-            mesh.set_indices(Some(Indices::U32(premesh.indices)));
-            mesh
-    
     }
 
+    fn setup_quad(&mut self,x:u32,z:u32,sub:u32) 
+    {
+  
+        let start_idx = z+(x-1)*(sub+1);
+
+        self.indices.extend (&[start_idx, start_idx+1, start_idx+sub+1]); 
+        self.indices.extend (&[start_idx+sub+2, start_idx+sub+1, start_idx+1]); 
+
+        //Probably very defect for non flat quads
+        //two triangle forming a quad could have different normals
+        let normal_first = compute_normal(self.positions[start_idx as usize], self.positions[start_idx as usize+1], self.positions[start_idx as usize+sub as usize+1]);
+        self.normals.extend([normal_first, normal_first, normal_first,normal_first]);
+
+        
+    }
+
+    //work in progress
     pub fn edit_terrain(
 
         mesh:&mut Mesh,
@@ -206,8 +171,8 @@ impl TerrainMesh {
         }
 
 
-        println!("{:?}",new_positions[0]);
-        println!("{}",new_positions.len());
+        //println!("{:?}",new_positions[0]);
+        //println!("{}",new_positions.len());
         
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, new_positions);
 
@@ -220,7 +185,8 @@ impl TerrainMesh {
 }
  
  
- fn compute_normal(v0: [f32; 3], v1: [f32; 3], v2: [f32; 3]) -> [f32; 3] {
+//Normal calculation defect for quads
+fn compute_normal(v0: [f32; 3], v1: [f32; 3], v2: [f32; 3]) -> [f32; 3] {
     let edge1 = [
         v1[0] - v0[0],
         v1[1] - v0[1],
@@ -240,31 +206,4 @@ impl TerrainMesh {
     ]
 }
  
- //is this right !!?? 
- fn compute_uv(x: f32, y: f32, bounds: [[f32; 2]; 2], texture_dimensions: f32) -> [f32; 2] {
-     
-     let start_bounds_x = bounds[0][0];
-     let end_bounds_x = bounds[1][0];
-     
-     let start_bounds_y = bounds[0][1];
-     let end_bounds_y = bounds[1][1];
-     
-     //x and y are the origin coords 
-     
-    let uv_worldspace = [
-        (x ) / (end_bounds_x - start_bounds_x),
-        (y ) / (end_bounds_y - start_bounds_y)
-    ];
-    
-    let uv = [
-        uv_worldspace[0] / texture_dimensions,
-        uv_worldspace[1] / texture_dimensions,  
-        
-    ];
-    
-   // println!("uv {:?}", uv);
-     
-    
-    uv
-}
   

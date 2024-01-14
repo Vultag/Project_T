@@ -115,7 +115,7 @@ fn main() {
         // The global wireframe config enables drawing of wireframes on every mesh,
         // except those with `NoWireframe`. Meshes with `Wireframe` will always have a wireframe,
         // regardless of the global configuration.
-        global: false,
+        global: true,
         // Controls the default color of all wireframes. Used as the default color for global wireframes.
         // Can be changed per mesh using the `WireframeColor` component.
         default_color: Color::RED,
@@ -144,11 +144,6 @@ pub struct TerrainMeshData {
  }
 
 
-//  #[derive(Default,Resource)]
-//  pub struct TerrainMeshResource {
-//      pub shaded: Handle<Mesh>,
-//      pub wireframe: Handle<Mesh>,
-//  }
 
 
 fn test_create_terrain(
@@ -161,9 +156,8 @@ fn test_create_terrain(
     //mut mattest_asset: ResMut<Assets<testMat>>
 ) {
 
-    
     //TEST TERRAIN MESH
-    const subdivision:u32 = 80;
+    const subdivision:u32 = 120;
     //add noise parameters ?
     let mesh = TerrainMesh::build_terrain( 80.0, subdivision);
     let terrain_shaded_mesh_handle = meshes.add(mesh);
@@ -205,6 +199,7 @@ fn test_create_terrain(
 
 }
 
+//work in progress
 fn terrain_authoring(
     mut commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
@@ -242,7 +237,6 @@ fn spawn_camera(mut commands: Commands) {
     let direction = Vec3{x:0.5,y:0.4,z:0.5};
     let length = 6.0;
     let pos = direction.normalize()*length;
-
 
     commands.spawn((
         Camera3dBundle {
