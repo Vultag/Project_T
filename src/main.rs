@@ -40,10 +40,7 @@ use bevy::{
 
 mod Terrain;
 
-//mod terrain_mesh;
-//mod terrain_noise;
 mod debug_line;
-//mod terrain_ui;
 
 use debug_line::LineMaterial;
 use Terrain::terrain_mesh::TerrainMesh;
@@ -120,7 +117,7 @@ fn main() {
         // The global wireframe config enables drawing of wireframes on every mesh,
         // except those with `NoWireframe`. Meshes with `Wireframe` will always have a wireframe,
         // regardless of the global configuration.
-        global: false,
+        global: true,
         // Controls the default color of all wireframes. Used as the default color for global wireframes.
         // Can be changed per mesh using the `WireframeColor` component.
         default_color: Color::RED,
@@ -142,7 +139,7 @@ fn main() {
 
 #[derive(Default,Component)]
 pub struct TerrainMeshData {
-    pub subdivision:u32,
+    pub subdivision_pow:u32,
     pub NOISE_SCALE:f32,
     pub CLIFF_STEEPNESS:f32,
     pub PLATEAU_HEIGHT:f32,
@@ -163,9 +160,9 @@ fn test_create_terrain(
 ) {
 
     
-    const subdivision:u32 = 80;
-    //add noise parameters ?
-    let mesh = TerrainMesh::build_terrain( 60.0, subdivision);
+    const subdivision_pow:u32 = 4;
+    
+    let mesh = TerrainMesh::build_RTIN_terrain( 100.0, subdivision_pow);
     let terrain_shaded_mesh_handle = meshes.add(mesh.clone());
 
     //terrain_mesh_res.shaded = terrain_shaded_mesh_handle;
@@ -194,7 +191,7 @@ fn test_create_terrain(
         ..default()
     },
     )).insert(TerrainMeshData{
-        subdivision,
+        subdivision_pow,
         NOISE_SCALE:0.05,
         CLIFF_STEEPNESS:15.0,
         PLATEAU_HEIGHT:2.0,

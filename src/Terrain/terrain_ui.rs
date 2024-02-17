@@ -415,7 +415,7 @@ fn handle_sliders(
                             //start 0.05
                             terrain_data.NOISE_SCALE = 0.10*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
                     
                         }
                     }
@@ -429,7 +429,7 @@ fn handle_sliders(
                             //start 15.0
                             terrain_data.CLIFF_STEEPNESS = 30.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
                     
                         }
                     }
@@ -443,7 +443,7 @@ fn handle_sliders(
                             //start 2.0
                             terrain_data.PLATEAU_HEIGHT = 4.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
                     
                         }
                     }
@@ -457,7 +457,7 @@ fn handle_sliders(
                             //start 0.5
                             terrain_data.HILL_VOLUME = 1.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
                     
                         }
                     }
@@ -471,7 +471,7 @@ fn handle_sliders(
                             //start 0.5
                             terrain_data.PIT_VOLUME = 1.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
                     
                         }
                     }
