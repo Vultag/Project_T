@@ -4,11 +4,10 @@ use bevy::{
     prelude::*,
     reflect::TypePath,
     render::{
-        mesh::{MeshVertexBufferLayout, PrimitiveTopology},
-        render_resource::{
+        mesh::{MeshVertexBufferLayout, PrimitiveTopology}, render_asset::RenderAssetUsages, render_resource::{
             AsBindGroup, PolygonMode, RenderPipelineDescriptor, ShaderRef,
             SpecializedMeshPipelineError,
-        },
+        }
     },
 };
 
@@ -50,7 +49,7 @@ impl From<LineList> for Mesh {
 
         // This tells wgpu that the positions are list of lines
         // where every pair is a start and end point
-        Mesh::new(PrimitiveTopology::LineList)
+        Mesh::new(PrimitiveTopology::LineList,RenderAssetUsages::MAIN_WORLD)
             // Add the vertices positions as an attribute
             .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vertices)
     }

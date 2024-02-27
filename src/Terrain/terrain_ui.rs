@@ -1,12 +1,13 @@
 use std::process::Child;
 
-use bevy::{prelude::*, transform::{commands, self}, reflect::{Enum, VariantType}, utils::error};
+use bevy::{prelude::*, reflect::{Enum, VariantType}, render::render_asset::RenderAssetUsages, transform::{self, commands}, utils::{error, petgraph::visit::NodeRef}};
 use bevy::window::PrimaryWindow;
 use noise::Clamp;
+use wgpu::{Extent3d, Texture, TextureDimension, TextureFormat};
 
-use super::terrain_mesh::TerrainMesh;
+use super::{terrain_mesh::TerrainMesh, terrain_noise::{self, NoiseImageData, NoiseMap, TerrainParameters}};
 
-use crate::TerrainMeshData;
+use crate::{test_create_terrain, TerrainMeshData};
 
 
 pub struct TerrainUIPlugin;
@@ -24,19 +25,58 @@ impl Plugin for TerrainUIPlugin{
     fn build(&self, app: &mut App)
     {
         app
-        .add_systems(Startup, spawn_ui)
+        .add_systems(Startup, spawn_ui.after(test_create_terrain))
         .add_systems(Update, handle_sliders);
     }
 }
 
 fn spawn_ui(
     mut commands:Commands,
+    terrain_parameters: Res<TerrainParameters>,
+    mut images: ResMut<Assets<Image>>,
+    //mut noise: ResMut<NoiseMap>,
     assets:Res<AssetServer>
 )
 {
 
-    let startvalue:f32 = 50.0;
+    let noise = terrain_noise::NoiseMap::build(terrain_parameters.size,terrain_parameters.subdivision_pow, &terrain_parameters);
 
+    let noise_image = terrain_noise::NoiseMap::write_to_image(&noise);
+
+    let image_handle = images.add(noise_image);
+
+    //noise image
+    commands.spawn(NodeBundle
+        {
+            //image scale
+            transform: Transform::from_scale(Vec3::new(1.0, 1.0, 1.0)),
+            style: Style{
+                align_self: AlignSelf::Stretch,
+                position_type:PositionType::Absolute,
+                top:Val::Percent(1.0),
+                left:Val::Percent(1.0),
+                ..Default::default()
+            },
+            
+            ..Default::default()
+        }).with_children(|parent| {
+            // Add the image to the container
+            parent.spawn(ImageBundle {
+                image: UiImage::new(image_handle.clone()),
+                style: Style{
+                    align_self: AlignSelf::Stretch,
+                    position_type:PositionType::Absolute,
+                    top:Val::Percent(1.0),
+                    left:Val::Percent(1.0),
+                    ..Default::default()
+                },
+                ..Default::default()
+            }).insert(NoiseImageData{image_handle});
+        });
+
+    
+    //values slider
+    let startvalue:f32 = 50.0;
     commands.spawn(NodeBundle
     {
         style: Style{
@@ -114,7 +154,7 @@ fn spawn_ui(
                         ..default()
                     },
                 )
-                .with_alignment(TextAlignment::Center).with_no_wrap(),
+                .with_justify(JustifyText::Center).with_no_wrap(),
                 ..default()
                 
             });
@@ -177,7 +217,7 @@ fn spawn_ui(
                             ..default()
                         },
                     )
-                    .with_alignment(TextAlignment::Center).with_no_wrap(),
+                    .with_justify(JustifyText::Center).with_no_wrap(),
                     ..default()
                     
                 });
@@ -240,7 +280,7 @@ fn spawn_ui(
                                 ..default()
                             },
                         )
-                        .with_alignment(TextAlignment::Center).with_no_wrap(),
+                        .with_justify(JustifyText::Center).with_no_wrap(),
                         ..default()
                         
                     });
@@ -303,7 +343,7 @@ fn spawn_ui(
                                     ..default()
                                 },
                             )
-                            .with_alignment(TextAlignment::Center).with_no_wrap(),
+                            .with_justify(JustifyText::Center).with_no_wrap(),
                             ..default()
                             
                         });
@@ -365,7 +405,7 @@ fn spawn_ui(
                                         ..default()
                                     },
                                 )
-                                .with_alignment(TextAlignment::Center).with_no_wrap(),
+                                .with_justify(JustifyText::Center).with_no_wrap(),
                                 ..default()
                                 
                             });
@@ -379,11 +419,16 @@ fn spawn_ui(
 
 fn handle_sliders(
     mut commands:Commands,
-    mouse_button: Res<Input<MouseButton>>,    
+    mouse_button: Res<ButtonInput<MouseButton>>,    
     transform_query: Query<&GlobalTransform,With<Style>>,
+    mut images: ResMut<Assets<Image>>,
+    mut Noise_image_query: Query<(&NoiseImageData)>,
+    //mut Noise_image_query: Query<(&Handle<Image>, &NoiseImageTag)>,
+    //mut Noise_image_query: Query<(&Handle<Image>)>,
     mut cursor_evr: EventReader<CursorMoved>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
-    mut terrain_query: Query<(&Handle<Mesh>,&mut TerrainMeshData)>, 
+    mut terrain_query: Query<(&Handle<Mesh>,&TerrainMeshData)>, 
+    mut terrain_parameters: ResMut<TerrainParameters>, 
     mut interaction_query: Query<(Entity,&Interaction,&mut SlidderCursorData, &mut Style, &Parent)>//, Changed<Interaction>>
 ){
 
@@ -393,7 +438,7 @@ fn handle_sliders(
         if *interation == Interaction::Pressed{
             sliderdata.grabbed = true;
 
-            for ev in cursor_evr.iter() {
+            for ev in cursor_evr.read() {
                 
                 
                 //range from 0.0 to 100.0 
@@ -407,71 +452,71 @@ fn handle_sliders(
                 {
                     // NOISE_SCALE slider
                     0 => {
-                        for (mut mesh_handle, mut terrain_data) in terrain_query.iter_mut() {
+                        for (mut mesh_handle,terrain_data) in terrain_query.iter_mut() {
     
             
                             let mut mesh = mesh_assets.get_mut(mesh_handle.id()).unwrap();
                 
                             //start 0.05
-                            terrain_data.NOISE_SCALE = 0.10*new_s_pos;
+                            terrain_parameters.NOISE_SCALE = 0.10*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
                     
                         }
                     }
                     // CLIFF_STEEPNESS slider
                     1 => {
-                        for (mut mesh_handle, mut terrain_data) in terrain_query.iter_mut() {
+                        for (mut mesh_handle,terrain_data) in terrain_query.iter_mut() {
     
             
                             let mut mesh = mesh_assets.get_mut(mesh_handle.id()).unwrap();
                 
                             //start 15.0
-                            terrain_data.CLIFF_STEEPNESS = 30.0*new_s_pos;
+                            terrain_parameters.CLIFF_STEEPNESS = 30.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
                     
                         }
                     }
                     // PLATEAU_HEIGHT slider
                     2 => {
-                        for (mut mesh_handle, mut terrain_data) in terrain_query.iter_mut() {
+                        for (mut mesh_handle, terrain_data) in terrain_query.iter_mut() {
     
             
                             let mut mesh = mesh_assets.get_mut(mesh_handle.id()).unwrap();
                 
                             //start 2.0
-                            terrain_data.PLATEAU_HEIGHT = 4.0*new_s_pos;
+                            terrain_parameters.PLATEAU_HEIGHT = 4.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
                     
                         }
                     }
                     // HILL_VOLUME slider
                     3 => {
-                        for (mut mesh_handle, mut terrain_data) in terrain_query.iter_mut() {
+                        for (mut mesh_handle, terrain_data) in terrain_query.iter_mut() {
     
             
                             let mut mesh = mesh_assets.get_mut(mesh_handle.id()).unwrap();
                 
                             //start 0.5
-                            terrain_data.HILL_VOLUME = 1.0*new_s_pos;
+                            terrain_parameters.HILL_VOLUME = 1.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
                     
                         }
                     }
                     // PIT_VOLUME slider
                     4 => {
-                        for (mut mesh_handle, mut terrain_data) in terrain_query.iter_mut() {
+                        for (mut mesh_handle, terrain_data) in terrain_query.iter_mut() {
     
             
                             let mut mesh = mesh_assets.get_mut(mesh_handle.id()).unwrap();
                 
                             //start 0.5
-                            terrain_data.PIT_VOLUME = 1.0*new_s_pos;
+                            terrain_parameters.PIT_VOLUME = 1.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,terrain_data.subdivision_pow, terrain_data.NOISE_SCALE, terrain_data.CLIFF_STEEPNESS, terrain_data.PLATEAU_HEIGHT, terrain_data.HILL_VOLUME, terrain_data.PIT_VOLUME);
+                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
                     
                         }
                     }
@@ -481,9 +526,15 @@ fn handle_sliders(
                     }
 
                 }
-            
-            
+                
             }
+
+            let noise = terrain_noise::NoiseMap::build(terrain_parameters.size,terrain_parameters.subdivision_pow, &terrain_parameters);
+
+            let noise_image = terrain_noise::NoiseMap::write_to_image(&noise);
+        
+            *images.get_mut(&Noise_image_query.get_single().unwrap().image_handle).unwrap() = noise_image;
+           
 
         }
         else {
@@ -495,15 +546,7 @@ fn handle_sliders(
                     sliderdata.grabbed = false;
                     break;
                 }
-    
             }
         }
-
-
     }
-
-
-
-
-
 }

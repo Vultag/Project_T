@@ -3,8 +3,12 @@
 use bitintr::Lzcnt;
 //correspond to the binary identification for triangles within the binary tree
 pub type BinId = u32;
-use noisy_bevy::{simplex_noise_2d_seeded,fbm_simplex_2d_seeded};
+//use noisy_bevy::{simplex_noise_2d_seeded,fbm_simplex_2d_seeded};
 use noise::{NoiseFn, Perlin, Seedable};
+
+use crate::TerrainMeshData;
+
+use super::terrain_noise::{self, NoiseMap, TerrainParameters};
 
 
 #[derive(Eq, PartialEq, Debug)]
@@ -235,8 +239,6 @@ pub fn rtin_identify_triangles(
     triangle_index: u32, 
     error_threshold: f32)  {
     
-    //let grid_size = 257;
-
     let triangle_bin_id = index_to_bin_id(triangle_index);
 
     let (right_child_index, left_child_index) = 
@@ -268,14 +270,19 @@ pub fn rtin_identify_triangles(
 }
 
 
-pub fn build_imperative_triangle_vec(grid_size:u32,size:f32,noise_seed: u32) -> Vec::<f32> {
-
+pub fn build_imperative_triangle_vec(
     
-    //let side = heightmap.width();
-    //let grid_size = size+1;
+    grid_size:u32,
+    size:f32,
+    //noisemap:&NoiseMap,
+    terrain_parameters:&TerrainParameters,
+    noise_seed: u32
+
+) -> Vec::<f32> {
+
+
     let number_of_triangles = (grid_size-1) * (grid_size-1) * 2 - 2;
-    //let number_of_levels = log_2(side)*2;
-    //to verify...
+
     let number_of_levels = (grid_size-1).ilog2()*2;
     
     let last_level = number_of_levels - 1;
@@ -292,15 +299,13 @@ pub fn build_imperative_triangle_vec(grid_size:u32,size:f32,noise_seed: u32) -> 
         let midpoint = pixel_coords_for_triangle_mid_point(triangle_bin_id, grid_size);
 
         let triangle_coords = get_triangle_coords(triangle_bin_id, grid_size);
-
-
-        const NOISE_SCALE:f32 = 0.05;
-        const CLIFF_STEEPNESS:f32 = 15.0; 
-        const PLATEAU_HEIGHT:f32 = 2.0;
-        const HILL_VOLUME:f32 = 0.5;
-        const PIT_VOLUME:f32 = 0.5;
-
         
+        //attempt with noise map
+        // let v0_height = noisemap.get_value(triangle_coords[0][0] as usize, triangle_coords[0][1] as usize);
+        // let v1_height = noisemap.get_value(triangle_coords[1][0] as usize, triangle_coords[1][1] as usize);
+        // let midpoint_height = 0.0;//noisemap.get_value(midpoint[0] as usize, midpoint[1] as usize);
+      
+
         let v0_x = (triangle_coords[0][0] as f32 / (grid_size-1) as f32)*size-size/2.0;
         let v0_z = (triangle_coords[0][1] as f32 / (grid_size-1) as f32)*size-size/2.0;
         let v1_x = (triangle_coords[1][0] as f32 / (grid_size-1) as f32)*size-size/2.0;
@@ -308,16 +313,29 @@ pub fn build_imperative_triangle_vec(grid_size:u32,size:f32,noise_seed: u32) -> 
         let vmid_x = (midpoint[0] as f32 / (grid_size-1) as f32)*size-size/2.0;
         let vmid_z = (midpoint[1] as f32 / (grid_size-1) as f32)*size-size/2.0;
 
+        let v0_height = terrain_noise::get_noise_value(v0_x, v0_z, terrain_parameters);
+        let v1_height = terrain_noise::get_noise_value(v1_x, v1_z, terrain_parameters);
+        let midpoint_height = terrain_noise::get_noise_value(vmid_x, vmid_z, terrain_parameters);
+            
 
-        let v0_noise = Perlin::new(1).get(([(v0_x as f64)*NOISE_SCALE as f64,(v0_z as f64)*NOISE_SCALE as f64]))as f32;
-        let v1_noise = Perlin::new(1).get(([(v1_x as f64)*NOISE_SCALE as f64,(v1_z as f64)*NOISE_SCALE as f64]))as f32;
-        let vmid_noise = Perlin::new(1).get(([(vmid_x as f64)*NOISE_SCALE as f64,(vmid_z as f64)*NOISE_SCALE as f64]))as f32;
+        // let v0_noise = Perlin::new(1).get(([(v0_x as f64)*terrain_data.NOISE_SCALE as f64,(v0_z as f64)*terrain_data.NOISE_SCALE as f64]))as f32;
+        // let v1_noise = Perlin::new(1).get(([(v1_x as f64)*terrain_data.NOISE_SCALE as f64,(v1_z as f64)*terrain_data.NOISE_SCALE as f64]))as f32;
+        // let vmid_noise = Perlin::new(1).get(([(vmid_x as f64)*terrain_data.NOISE_SCALE as f64,(vmid_z as f64)*terrain_data.NOISE_SCALE as f64]))as f32;
         
 
-        let v0_height = (((v0_noise+HILL_VOLUME -1.0).clamp(0.0, 1.0))*CLIFF_STEEPNESS).clamp(-PLATEAU_HEIGHT,PLATEAU_HEIGHT);
-        let v1_height = (((v1_noise+HILL_VOLUME -1.0).clamp(0.0, 1.0))*CLIFF_STEEPNESS).clamp(-PLATEAU_HEIGHT,PLATEAU_HEIGHT);
-        let midpoint_height = (((vmid_noise+HILL_VOLUME -1.0).clamp(0.0, 1.0))*CLIFF_STEEPNESS).clamp(-PLATEAU_HEIGHT,PLATEAU_HEIGHT);
+        // let v0_hill = (((v0_noise+terrain_data.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
+        // let v1_hill = (((v1_noise+terrain_data.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
+        // let v0_pit = (((v0_noise-terrain_data.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
+        // let v1_pit = (((v1_noise-terrain_data.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
+        // let midpoint_hill = (((vmid_noise+terrain_data.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
+        // let midpoint_pit = (((vmid_noise-terrain_data.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
         
+
+        // let v0_height = v0_hill + v0_pit;
+        // let v1_height = v1_hill + v1_pit;
+        // let midpoint_height = midpoint_hill + midpoint_pit;
+        
+     
         let midpoint_interpolated = (v0_height+v1_height)/2.0; 
 
         let this_triangle_height_diff = (midpoint_interpolated - midpoint_height).abs();

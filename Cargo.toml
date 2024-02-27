@@ -6,22 +6,24 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = {version = "0.12.0"}
+bevy = {version = "0.13.0"}
 # bevy_editor_pls = {git = "https://github.com/jakobhellermann/bevy_editor_pls"}
 # bevy_rapier2d = { version = "0.22.0", features = [ "simd-stable", "debug-render-2d" ] }
 winit = "0.29.4"
-env_logger = "0.10"
+env_logger = "0.11.2"
 log = "0.4"
-wgpu = "0.18"
+wgpu = "0.19.1"
 #bevy_egui = "0.24.0"
 
-noisy_bevy = "0.5.0"
-bevy-fps-counter = "*"
+#noisy_bevy = "0.5.0"
+#bevy-fps-counter = "*"
 bitintr = "0.3.0"
 
 #pas utilise ?
 noise = "0.8.2"
 rand = "0.8.5"
+#cargo-cache = "0.8.3"
+#cargo-clean-all = "0.6.2"
 
 [profile.dev]
 opt-level = 1

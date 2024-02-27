@@ -14,13 +14,12 @@ use bevy::utils::petgraph::matrix_graph::Zero;
 use noise::{NoiseFn, Perlin};
 use rand::Rng;
 
-use noisy_bevy::{simplex_noise_2d_seeded,fbm_simplex_2d_seeded, NoisyShaderPlugin};
+//use noisy_bevy::{simplex_noise_2d_seeded,fbm_simplex_2d_seeded, NoisyShaderPlugin};
 
-use bevy_fps_counter::{FpsCounter, FpsCounterPlugin};
+//use bevy_fps_counter::{FpsCounter, FpsCounterPlugin};
 
 
 use bevy::input::mouse::MouseWheel;
-use bevy::reflect::TypeUuid;
 use bevy::render::render_resource::{AddressMode, PrimitiveTopology};
 use bevy::render::render_resource::AsBindGroup;
 use bevy::render::mesh::{VertexAttributeValues, Indices};
@@ -44,7 +43,10 @@ mod debug_line;
 
 use debug_line::LineMaterial;
 use Terrain::terrain_mesh::TerrainMesh;
+use Terrain::terrain_noise::{NoiseMap, TerrainParameters};
 use Terrain::terrain_ui::TerrainUIPlugin;
+
+use crate::Terrain::terrain_noise;
 
 #[derive(Component)]
 struct CameraData {
@@ -108,6 +110,7 @@ fn main() {
                 features: WgpuFeatures::POLYGON_MODE_LINE,
                 ..default()
             }),
+            synchronous_pipeline_compilation: false,
         }),
         // You need to add this plugin to enable wireframe rendering
         WireframePlugin,
@@ -126,32 +129,35 @@ fn main() {
     .add_plugins(MaterialPlugin::<TerainMaterial>::default())
     .add_plugins(MaterialPlugin::<TestMaterial>::default())
     .add_plugins(MaterialPlugin::<LineMaterial>::default())
-    .add_plugins(NoisyShaderPlugin)
-    .add_plugins(FpsCounterPlugin)
+    //.add_plugins(NoisyShaderPlugin)
+    //.add_plugins(FpsCounterPlugin)
     .add_plugins(TerrainUIPlugin)
     .add_systems(Startup, test_create_terrain)
     .add_systems(Startup, spawn_camera)
     .add_systems(Update, camera_control)
+    .insert_resource(TerrainParameters {
+        size: 100.0,
+        subdivision_pow: 4,
+        NOISE_SCALE: 0.05,
+        CLIFF_STEEPNESS: 15.0,
+        PLATEAU_HEIGHT: 2.0,
+        HILL_VOLUME: 0.5,
+        PIT_VOLUME: 0.5,
+    }) // Add your custom resource with initial values
     //.add_systems(Startup, terrain_authoring_window)
 
     .run()
 }
 
-#[derive(Default,Component)]
-pub struct TerrainMeshData {
-    pub subdivision_pow:u32,
-    pub NOISE_SCALE:f32,
-    pub CLIFF_STEEPNESS:f32,
-    pub PLATEAU_HEIGHT:f32,
-    pub HILL_VOLUME:f32,
-    pub PIT_VOLUME:f32,
- }
-
+ #[derive(Default,Component)]
+pub struct TerrainMeshData {}
 
 fn test_create_terrain(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     asset_server: ResMut<AssetServer>,
+    mut terrain_parameters: ResMut<TerrainParameters>,
+    //mut noise_map: ResMut<NoiseMap>,
     mut terainmaterial: ResMut<Assets<TerainMaterial>>,
     //mut terrain_mesh_res: ResMut<TerrainMeshResource>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -160,9 +166,7 @@ fn test_create_terrain(
 ) {
 
     
-    const subdivision_pow:u32 = 4;
-    
-    let mesh = TerrainMesh::build_RTIN_terrain( 100.0, subdivision_pow);
+    let mesh = TerrainMesh::build_RTIN_terrain( terrain_parameters.size, terrain_parameters.subdivision_pow,&terrain_parameters);
     let terrain_shaded_mesh_handle = meshes.add(mesh.clone());
 
     //terrain_mesh_res.shaded = terrain_shaded_mesh_handle;
@@ -190,14 +194,7 @@ fn test_create_terrain(
             }),
         ..default()
     },
-    )).insert(TerrainMeshData{
-        subdivision_pow,
-        NOISE_SCALE:0.05,
-        CLIFF_STEEPNESS:15.0,
-        PLATEAU_HEIGHT:2.0,
-        HILL_VOLUME:0.5,
-        PIT_VOLUME:0.5
-    });
+    )).insert(TerrainMeshData{});
 
     // DRAW TERRAIN MESH NORMALS
     /* 
@@ -283,10 +280,10 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn camera_control(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut mouse_motion: EventReader<MouseMotion>,
     mut mouse_wheel: EventReader<MouseWheel>,
-    mouse_button: Res<Input<MouseButton>>,    
+    mouse_button: Res<ButtonInput<MouseButton>>,    
     mesh_query: Query<&Handle<Mesh>, With<GroundTag>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut query: Query<(&mut Transform,&mut CameraData)>,
@@ -362,19 +359,19 @@ fn camera_control(
     let mut mouv = Vec2::ZERO;
     let mouv_speed = 0.05;
 
-    if keyboard_input.pressed(KeyCode::Z) {
+    if keyboard_input.pressed(KeyCode::KeyW) {
         mouv.x -= 1.0*mouv_speed*cam.1.lenght*0.2;
 
     }
-    if keyboard_input.pressed(KeyCode::Q) {
+    if keyboard_input.pressed(KeyCode::KeyA) {
         mouv.y += 1.0*mouv_speed*cam.1.lenght*0.2;
 
     }
-    if keyboard_input.pressed(KeyCode::S) {
+    if keyboard_input.pressed(KeyCode::KeyS) {
         mouv.x += 1.0*mouv_speed*cam.1.lenght*0.2;
 
     }
-    if keyboard_input.pressed(KeyCode::D) {
+    if keyboard_input.pressed(KeyCode::KeyD) {
         mouv.y -= 1.0*mouv_speed*cam.1.lenght*0.2;
 
     }
