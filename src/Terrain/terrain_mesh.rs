@@ -74,6 +74,7 @@ impl TerrainMesh {
         let number_of_last_level_triangles = (grid_size-1)*(grid_size-1)*2;
 
         //noise
+        let perlin = Perlin::new(1);//
         let noisemap = &terrain_noise::NoiseMap::build(size,subdivision_pow, terrain_parameters);
         //terrain_ui::spawn_noise_image(commands, images, assets)
 
@@ -123,15 +124,8 @@ impl TerrainMesh {
         
                     let new_vertex_x = (new_vertex[0] as f32 / (grid_size-1) as f32)*size-size/2.0;
                     let new_vertex_z = (new_vertex[1] as f32 / (grid_size-1) as f32)*size-size/2.0;
-                    
-                    //let vertex_noise = Perlin::new(1).get(([(new_vertex_x as f64)*terrain_data.NOISE_SCALE as f64,(new_vertex_z as f64)*terrain_data.NOISE_SCALE as f64]))as f32;
-
-                    //let new_vertex_hill = (((vertex_noise+terrain_data.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
-                    //let new_vertex_pit = (((vertex_noise-terrain_data.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_data.CLIFF_STEEPNESS).clamp(-terrain_data.PLATEAU_HEIGHT,terrain_data.PLATEAU_HEIGHT);
-                    
-                    
+              
                     //here get the noise from terrain_noise.rs
-                    //let new_vertex_y = new_vertex_hill + new_vertex_pit;
                     let new_vertex_y = terrain_noise::get_noise_value(new_vertex_x, new_vertex_z, terrain_parameters);
                
 

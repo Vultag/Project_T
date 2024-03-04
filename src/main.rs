@@ -143,6 +143,7 @@ fn main() {
         PLATEAU_HEIGHT: 2.0,
         HILL_VOLUME: 0.5,
         PIT_VOLUME: 0.5,
+        perlin:Perlin::new(1),
     }) // Add your custom resource with initial values
     //.add_systems(Startup, terrain_authoring_window)
 

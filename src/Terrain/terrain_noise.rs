@@ -20,6 +20,7 @@ pub struct TerrainParameters {
     pub PLATEAU_HEIGHT:f32,
     pub HILL_VOLUME:f32,
     pub PIT_VOLUME:f32,
+    pub perlin:Perlin,
  }
 
 //#[derive(Resource)]
@@ -50,8 +51,9 @@ impl NoiseMap {
                 let x_ajusted = (x as f32 / (grid_size-1) as f32)*size-size/2.0;
                 let z_ajusted = (z as f32 / (grid_size-1) as f32)*size-size/2.0;
                 
-                let noise = Perlin::new(1).get(([(x_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64,(z_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
-                   
+                //let noise = Perlin::new(1).get(([(x_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64,(z_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
+                let noise = terrain_parameters.perlin.get(([(x_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64,(z_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
+                    
                 let hill_value = (((noise+terrain_parameters.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);
                 let pit_value = (((noise-terrain_parameters.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);
                 let value = hill_value + pit_value;
@@ -114,7 +116,7 @@ impl NoiseMap {
 //temporary, yet to find the best way
 pub fn get_noise_value(x: f32, z: f32,terrain_parameters:&TerrainParameters) -> f32 {
 
-    let noise = Perlin::new(1).get(([(x as f64)*terrain_parameters.NOISE_SCALE as f64,(z as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
+    let noise = terrain_parameters.perlin.get(([(x as f64)*terrain_parameters.NOISE_SCALE as f64,(z as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
                    
     let hill_value = (((noise+terrain_parameters.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);
     let pit_value = (((noise-terrain_parameters.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);
