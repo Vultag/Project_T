@@ -1,13 +1,10 @@
-use std::process::Child;
 
-use bevy::{prelude::*, reflect::{Enum, VariantType}, render::render_asset::RenderAssetUsages, transform::{self, commands}, utils::{error, petgraph::visit::NodeRef}};
-use bevy::window::PrimaryWindow;
-use noise::Clamp;
-use wgpu::{Extent3d, Texture, TextureDimension, TextureFormat};
+use bevy::{prelude::*};
 
-use super::{terrain_mesh::TerrainMesh, terrain_noise::{self, NoiseImageData, NoiseMap, TerrainParameters}};
 
-use crate::{test_create_terrain, TerrainMeshData};
+use super::{terrain_mesh::TerrainMesh, terrain_noise::{self, NoiseImageData, TerrainParameters}};
+
+use super::terrain_plugin::{spawn_terrain, TerrainMeshData};
 
 
 pub struct TerrainUIPlugin;
@@ -25,7 +22,7 @@ impl Plugin for TerrainUIPlugin{
     fn build(&self, app: &mut App)
     {
         app
-        .add_systems(Startup, spawn_ui.after(test_create_terrain))
+        .add_systems(Startup, spawn_ui.after(spawn_terrain))
         .add_systems(Update, handle_sliders);
     }
 }
@@ -39,7 +36,7 @@ fn spawn_ui(
 )
 {
 
-    let noise = terrain_noise::NoiseMap::build(terrain_parameters.size,terrain_parameters.subdivision_pow, &terrain_parameters);
+    let noise = terrain_noise::NoiseMap::build(terrain_parameters.subdivision_pow, &terrain_parameters);
 
     let noise_image = terrain_noise::NoiseMap::write_to_image(&noise);
 
@@ -460,7 +457,7 @@ fn handle_sliders(
                             //start 0.05
                             terrain_parameters.NOISE_SCALE = 0.10*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
+                            TerrainMesh::edit_terrain(mesh,&terrain_data,&terrain_parameters);
                     
                         }
                     }
@@ -474,7 +471,7 @@ fn handle_sliders(
                             //start 15.0
                             terrain_parameters.CLIFF_STEEPNESS = 30.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
+                            TerrainMesh::edit_terrain(mesh,&terrain_data,&terrain_parameters);
                     
                         }
                     }
@@ -488,7 +485,7 @@ fn handle_sliders(
                             //start 2.0
                             terrain_parameters.PLATEAU_HEIGHT = 4.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
+                            TerrainMesh::edit_terrain(mesh,&terrain_data,&terrain_parameters);
                     
                         }
                     }
@@ -502,7 +499,7 @@ fn handle_sliders(
                             //start 0.5
                             terrain_parameters.HILL_VOLUME = 1.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
+                            TerrainMesh::edit_terrain(mesh,&terrain_data,&terrain_parameters);
                     
                         }
                     }
@@ -516,7 +513,7 @@ fn handle_sliders(
                             //start 0.5
                             terrain_parameters.PIT_VOLUME = 1.0*new_s_pos;
                 
-                            TerrainMesh::edit_terrain(mesh,&terrain_parameters);
+                            TerrainMesh::edit_terrain(mesh,&terrain_data,&terrain_parameters);
                     
                         }
                     }
@@ -529,7 +526,7 @@ fn handle_sliders(
                 
             }
 
-            let noise = terrain_noise::NoiseMap::build(terrain_parameters.size,terrain_parameters.subdivision_pow, &terrain_parameters);
+            let noise = terrain_noise::NoiseMap::build(terrain_parameters.subdivision_pow, &terrain_parameters);
 
             let noise_image = terrain_noise::NoiseMap::write_to_image(&noise);
         

@@ -25,11 +25,13 @@ use bevy::render::render_resource::PrimitiveTopology::TriangleList;
 //use noise::{NoiseFn, Perlin, Seedable};
 pub type BinId = u32;
 
-use crate::TerrainMeshData;
+//use crate::TerrainMeshData;
 
 use super::terrain_noise::TerrainParameters;
+use super::terrain_plugin::TerrainMeshData;
 use super::{terrain_noise, terrain_rtin, terrain_ui};
 
+//pub struct TerrainPlugin;
 
 //use super::terrain_rtin;
 
@@ -41,6 +43,7 @@ pub struct TerrainMesh {
     normals: Vec<Vec3>,
     indices: Vec<u32>,
 }
+
 
 impl TerrainMesh {
     fn new() -> Self {
@@ -56,11 +59,13 @@ impl TerrainMesh {
     /// RTIN
     pub fn build_RTIN_terrain(
 
-        size:f32,
+        coords:[u32;2],
         subdivision_pow:u32,
         terrain_parameters:&TerrainParameters
     
     ) -> Mesh{ 
+
+        const size:f32 = 20.0;
 
         let mut premesh = Self::new();
 
@@ -75,10 +80,10 @@ impl TerrainMesh {
 
         //noise
         let perlin = Perlin::new(1);//
-        let noisemap = &terrain_noise::NoiseMap::build(size,subdivision_pow, terrain_parameters);
+        let noisemap = &terrain_noise::NoiseMap::build(subdivision_pow, terrain_parameters);
         //terrain_ui::spawn_noise_image(commands, images, assets)
 
-        let errors_vec = terrain_rtin::build_imperative_triangle_vec(grid_size,size,&terrain_parameters,1);
+        let errors_vec = terrain_rtin::build_imperative_triangle_vec(coords,grid_size,&terrain_parameters,1);
 
         let mut vertices_array_position = HashMap::<u32, usize>::new(); 
     
@@ -92,7 +97,7 @@ impl TerrainMesh {
         
         //VERY BAD NEED TO FIX !!
         //arbitrary aproximation overshoot the normal array size but sometimes undershoot -> oob -> crash 
-        premesh.normals.resize( (triangles.len()/2+grid_size as usize) , Vec3::ZERO);
+        premesh.normals.resize( (triangles.len()+grid_size as usize) , Vec3::ZERO);
 
 
         for triangle_bin_id in triangles {
@@ -126,7 +131,8 @@ impl TerrainMesh {
                     let new_vertex_z = (new_vertex[1] as f32 / (grid_size-1) as f32)*size-size/2.0;
               
                     //here get the noise from terrain_noise.rs
-                    let new_vertex_y = terrain_noise::get_noise_value(new_vertex_x, new_vertex_z, terrain_parameters);
+                    //let new_vertex_y = terrain_noise::get_noise_value(new_vertex_x, new_vertex_z, terrain_parameters);
+                    let new_vertex_y = terrain_noise::get_noise_value(new_vertex[0]+coords[0], new_vertex[1]+coords[1], terrain_parameters);
                
 
                     let new_vertex_3d = [
@@ -182,11 +188,12 @@ impl TerrainMesh {
     pub fn edit_terrain(
 
         mesh:&mut Mesh,
-        terrain_parameters:&TerrainParameters
+        terrain_data:&TerrainMeshData,
+        terrain_parameters:&TerrainParameters,
     
     ){ 
 
-        let new_mesh = Self::build_RTIN_terrain(100.0, terrain_parameters.subdivision_pow, terrain_parameters);
+        let new_mesh = Self::build_RTIN_terrain(terrain_data.coords,terrain_parameters.subdivision_pow, terrain_parameters);
 
         mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, new_mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().clone());        
         mesh.insert_indices(new_mesh.indices().unwrap().clone());

@@ -16,16 +16,17 @@ wgpu = "0.19.1"
 #bevy_egui = "0.24.0"
 
 #noisy_bevy = "0.5.0"
-#bevy-fps-counter = "*"
+bevy-fps-counter = "*"
 bitintr = "0.3.0"
 
 #pas utilise ?
 noise = "0.8.2"
-rand = "0.8.5"
+#rand = "0.8.5"
 #cargo-cache = "0.8.3"
 #cargo-clean-all = "0.6.2"
 
 [profile.dev]
+incremental = true
 opt-level = 1
 
 [profile.dev.package."*"]

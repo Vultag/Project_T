@@ -6,7 +6,7 @@ pub type BinId = u32;
 //use noisy_bevy::{simplex_noise_2d_seeded,fbm_simplex_2d_seeded};
 use noise::{NoiseFn, Perlin, Seedable};
 
-use crate::TerrainMeshData;
+use super::terrain_plugin::TerrainMeshData;
 
 use super::terrain_noise::{self, NoiseMap, TerrainParameters};
 
@@ -272,14 +272,16 @@ pub fn rtin_identify_triangles(
 
 pub fn build_imperative_triangle_vec(
     
+    coords:[u32;2],
     grid_size:u32,
-    size:f32,
+    //size:f32,
     //noisemap:&NoiseMap,
     terrain_parameters:&TerrainParameters,
     noise_seed: u32
 
 ) -> Vec::<f32> {
 
+    const size:f32 = 20.0;
 
     let number_of_triangles = (grid_size-1) * (grid_size-1) * 2 - 2;
 
@@ -313,9 +315,12 @@ pub fn build_imperative_triangle_vec(
         let vmid_x = (midpoint[0] as f32 / (grid_size-1) as f32)*size-size/2.0;
         let vmid_z = (midpoint[1] as f32 / (grid_size-1) as f32)*size-size/2.0;
 
-        let v0_height = terrain_noise::get_noise_value(v0_x, v0_z, terrain_parameters);
-        let v1_height = terrain_noise::get_noise_value(v1_x, v1_z, terrain_parameters);
-        let midpoint_height = terrain_noise::get_noise_value(vmid_x, vmid_z, terrain_parameters);
+        // let v0_height = terrain_noise::get_noise_value(v0_x, v0_z, terrain_parameters);
+        // let v1_height = terrain_noise::get_noise_value(v1_x, v1_z, terrain_parameters);
+        // let midpoint_height = terrain_noise::get_noise_value(vmid_x, vmid_z, terrain_parameters);
+        let v0_height = terrain_noise::get_noise_value(triangle_coords[0][0]+coords[0], triangle_coords[0][1]+coords[1], terrain_parameters);
+        let v1_height = terrain_noise::get_noise_value(triangle_coords[1][0]+coords[0], triangle_coords[1][1]+coords[1], terrain_parameters);
+        let midpoint_height = terrain_noise::get_noise_value(midpoint[0]+coords[0], midpoint[1]+coords[1], terrain_parameters);
             
 
         // let v0_noise = Perlin::new(1).get(([(v0_x as f64)*terrain_data.NOISE_SCALE as f64,(v0_z as f64)*terrain_data.NOISE_SCALE as f64]))as f32;

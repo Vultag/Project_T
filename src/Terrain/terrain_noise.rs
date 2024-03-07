@@ -1,9 +1,8 @@
 
-use crate::TerrainMeshData;
+
 use bevy::{asset::Handle, ecs::{component::Component, system::Resource}, render::{render_asset::RenderAssetUsages, texture::Image}};
-use noise::{NoiseFn, Perlin, Seedable};
+use noise::{NoiseFn, Perlin};
 use wgpu::{TextureDimension, TextureFormat};
-use std::collections::HashMap;
 use crate::Extent3d;
 
 #[derive(Component)]
@@ -34,8 +33,10 @@ pub struct NoiseMap {
 impl NoiseMap {
 
 
-    pub fn build(size:f32,subdiv_pow: u32,terrain_parameters:&TerrainParameters) -> Self {
+    pub fn build(subdiv_pow: u32,terrain_parameters:&TerrainParameters) -> Self {
 
+            
+        const size:f32 = 20.0;
 
         let sub = (2 as u32).pow(terrain_parameters.subdivision_pow);
 
@@ -48,11 +49,11 @@ impl NoiseMap {
             for x in (0..grid_size)
             {
 
-                let x_ajusted = (x as f32 / (grid_size-1) as f32)*size-size/2.0;
-                let z_ajusted = (z as f32 / (grid_size-1) as f32)*size-size/2.0;
+                //let x_ajusted = (x as f32 / (grid_size-1) as f32)*size-size/2.0;
+                //let z_ajusted = (z as f32 / (grid_size-1) as f32)*size-size/2.0;
                 
                 //let noise = Perlin::new(1).get(([(x_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64,(z_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
-                let noise = terrain_parameters.perlin.get(([(x_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64,(z_ajusted as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
+                let noise = terrain_parameters.perlin.get(([(x as f64)*terrain_parameters.NOISE_SCALE as f64,(z as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
                     
                 let hill_value = (((noise+terrain_parameters.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);
                 let pit_value = (((noise-terrain_parameters.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);
@@ -114,9 +115,9 @@ impl NoiseMap {
 
 
 //temporary, yet to find the best way
-pub fn get_noise_value(x: f32, z: f32,terrain_parameters:&TerrainParameters) -> f32 {
+pub fn get_noise_value(x: u32, z: u32,terrain_parameters:&TerrainParameters) -> f32 {
 
-    let noise = terrain_parameters.perlin.get(([(x as f64)*terrain_parameters.NOISE_SCALE as f64,(z as f64)*terrain_parameters.NOISE_SCALE as f64]))as f32;
+    let noise = terrain_parameters.perlin.get(([(x as f64)*terrain_parameters.NOISE_SCALE as f64*0.2,(z as f64)*terrain_parameters.NOISE_SCALE as f64*0.2]))as f32;
                    
     let hill_value = (((noise+terrain_parameters.HILL_VOLUME -1.0).clamp(0.0, 1.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);
     let pit_value = (((noise-terrain_parameters.PIT_VOLUME +1.0).clamp(-1.0, 0.0))*terrain_parameters.CLIFF_STEEPNESS).clamp(-terrain_parameters.PLATEAU_HEIGHT,terrain_parameters.PLATEAU_HEIGHT);

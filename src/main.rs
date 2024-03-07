@@ -1,22 +1,16 @@
 #![allow(warnings)]
 
 
-use std::any::Any;
-use std::collections::btree_map::Range;
 use std::f32::consts::{PI, E};
 
-use bevy::ecs::archetype::ArchetypeRow;
 use bevy::input::mouse::MouseMotion;
-use bevy::input::mouse::MouseButtonInput;
 use bevy::math;
 
-use bevy::utils::petgraph::matrix_graph::Zero;
 use noise::{NoiseFn, Perlin};
-use rand::Rng;
 
 //use noisy_bevy::{simplex_noise_2d_seeded,fbm_simplex_2d_seeded, NoisyShaderPlugin};
 
-//use bevy_fps_counter::{FpsCounter, FpsCounterPlugin};
+use bevy_fps_counter::{FpsCounter, FpsCounterPlugin};
 
 
 use bevy::input::mouse::MouseWheel;
@@ -42,9 +36,9 @@ mod Terrain;
 mod debug_line;
 
 use debug_line::LineMaterial;
-use Terrain::terrain_mesh::TerrainMesh;
 use Terrain::terrain_noise::{NoiseMap, TerrainParameters};
 use Terrain::terrain_ui::TerrainUIPlugin;
+use Terrain::terrain_plugin::TerrainPlugin;
 
 use crate::Terrain::terrain_noise;
 
@@ -131,101 +125,16 @@ fn main() {
     .add_plugins(MaterialPlugin::<LineMaterial>::default())
     //.add_plugins(NoisyShaderPlugin)
     //.add_plugins(FpsCounterPlugin)
+
+    //put in terrainplugin
     .add_plugins(TerrainUIPlugin)
-    .add_systems(Startup, test_create_terrain)
+    .add_plugins(TerrainPlugin)
     .add_systems(Startup, spawn_camera)
     .add_systems(Update, camera_control)
-    .insert_resource(TerrainParameters {
-        size: 100.0,
-        subdivision_pow: 4,
-        NOISE_SCALE: 0.05,
-        CLIFF_STEEPNESS: 15.0,
-        PLATEAU_HEIGHT: 2.0,
-        HILL_VOLUME: 0.5,
-        PIT_VOLUME: 0.5,
-        perlin:Perlin::new(1),
-    }) // Add your custom resource with initial values
-    //.add_systems(Startup, terrain_authoring_window)
-
     .run()
 }
 
- #[derive(Default,Component)]
-pub struct TerrainMeshData {}
 
-fn test_create_terrain(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    asset_server: ResMut<AssetServer>,
-    mut terrain_parameters: ResMut<TerrainParameters>,
-    //mut noise_map: ResMut<NoiseMap>,
-    mut terainmaterial: ResMut<Assets<TerainMaterial>>,
-    //mut terrain_mesh_res: ResMut<TerrainMeshResource>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut line_materials: ResMut<Assets<debug_line::LineMaterial>>,
-    //mut mattest_asset: ResMut<Assets<testMat>>
-) {
-
-    
-    let mesh = TerrainMesh::build_RTIN_terrain( terrain_parameters.size, terrain_parameters.subdivision_pow,&terrain_parameters);
-    let terrain_shaded_mesh_handle = meshes.add(mesh.clone());
-
-    //terrain_mesh_res.shaded = terrain_shaded_mesh_handle;
-
-    let custom_texture_handle: Handle<Image> = asset_server.load("uv_grid.png");
-    let custom_texture_handle_g: Handle<Image> = asset_server.load("grass-texture-background.png");
-    let custom_texture_handle_d: Handle<Image> = asset_server.load("texture_dirt.png");
-
-    let terain_mat = terainmaterial.add(TerainMaterial{
-        color_texture_g:Some(custom_texture_handle_g),
-        value: 0.0,
-        color_texture_d:Some(custom_texture_handle_d),
-    });
-
-    commands.spawn((MaterialMeshBundle  {
-        mesh: terrain_shaded_mesh_handle,
-        //material: terain_mat,
-        material: materials.add(StandardMaterial{
-            
-            base_color_texture:Some(custom_texture_handle),
-            alpha_mode:AlphaMode::Opaque,
-            double_sided:true,
-
-            ..Default::default()
-            }),
-        ..default()
-    },
-    )).insert(TerrainMeshData{});
-
-    // DRAW TERRAIN MESH NORMALS
-    /* 
-    let mesh = mesh;
-    let v_pos =  mesh.attribute(Mesh::ATTRIBUTE_POSITION);
-    let v_normal =  mesh.attribute(Mesh::ATTRIBUTE_NORMAL);
-    //println!("append:{}",mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len());
-    for i in  0..mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap().len()
-    {
-        // Spawn a list of lines with start and end points for each lines
-        commands.spawn(MaterialMeshBundle {
-            mesh: meshes.add(Mesh::from(debug_line::LineList {
-                lines: vec![
-                    (Vec3::from(v_pos.unwrap().as_float3().unwrap()[i]),
-                    (Vec3::from(v_pos.unwrap().as_float3().unwrap()[i])
-                    +(Vec3::from(v_normal.unwrap().as_float3().unwrap()[i]).normalize()*Vec3::new(4.0, 4.0, 4.0)))
-                    )
-                ],
-            })),
-            transform: Transform::from_translation(Vec3::ZERO),
-            material: line_materials.add(debug_line::LineMaterial {
-                color: Color::RED,
-            }),
-            ..default()
-        });
-    }
-    */
-
-
-}
 
 
 
